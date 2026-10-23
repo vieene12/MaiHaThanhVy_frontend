@@ -112,19 +112,19 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
               runSpacing: 8,
               children: [
                 ActionChip(
-                  avatar: const Icon(Icons.phone_android, size: 16),
-                  label: const Text('Android Emulator (10.0.2.2:5215)'),
-                  onPressed: () => _applyPreset('http://10.0.2.2:5215'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.computer, size: 16),
-                  label: const Text('Localhost (localhost:5215)'),
+                  avatar: const Icon(Icons.usb, size: 16),
+                  label: const Text('Điện thoại USB / Local (localhost:5215)'),
                   onPressed: () => _applyPreset('http://localhost:5215'),
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.lock, size: 16),
-                  label: const Text('HTTPS (localhost:7190)'),
-                  onPressed: () => _applyPreset('https://localhost:7190'),
+                  avatar: const Icon(Icons.wifi, size: 16),
+                  label: const Text('Mạng Wi-Fi LAN (192.168.1.25:5215)'),
+                  onPressed: () => _applyPreset('http://192.168.1.25:5215'),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.phone_android, size: 16),
+                  label: const Text('Android Emulator (10.0.2.2:5215)'),
+                  onPressed: () => _applyPreset('http://10.0.2.2:5215'),
                 ),
               ],
             ),

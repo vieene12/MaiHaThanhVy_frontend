@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Brand Colors
@@ -49,7 +48,6 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: primary,
-      fontFamily: GoogleFonts.inter().fontFamily,
       scaffoldBackgroundColor: backgroundLight,
       colorScheme: const ColorScheme.light(
         primary: primary,
@@ -57,16 +55,15 @@ class AppTheme {
         surface: surfaceLight,
         error: error,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: surfaceLight,
-        foregroundColor: const Color(0xFF0F172A),
+        foregroundColor: Color(0xFF0F172A),
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontFamily: GoogleFonts.inter().fontFamily,
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF0F172A),
+          color: Color(0xFF0F172A),
         ),
       ),
       cardTheme: CardThemeData(
@@ -87,8 +84,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
+          textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
@@ -102,8 +98,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
+          textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
@@ -143,7 +138,6 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: primaryLight,
-      fontFamily: GoogleFonts.inter().fontFamily,
       scaffoldBackgroundColor: backgroundDark,
       colorScheme: const ColorScheme.dark(
         primary: primaryLight,
@@ -151,13 +145,12 @@ class AppTheme {
         surface: surfaceDark,
         error: error,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: surfaceDark,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontFamily: GoogleFonts.inter().fontFamily,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -181,8 +174,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
+          textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),

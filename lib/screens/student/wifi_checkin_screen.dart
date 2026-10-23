@@ -42,7 +42,8 @@ class _WifiCheckinScreenState extends State<WifiCheckinScreen> {
   Future<void> _handleWifiCheckin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final sessionId = int.tryParse(_sessionIdController.text.trim());
+    final sessionIdText = _sessionIdController.text.trim();
+    final sessionId = sessionIdText.isEmpty ? 1 : int.tryParse(sessionIdText);
     if (sessionId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -170,16 +171,10 @@ class _WifiCheckinScreenState extends State<WifiCheckinScreen> {
 
               CustomTextField(
                 controller: _sessionIdController,
-                label: 'Mã phiên điểm danh (Session ID)',
-                hint: 'Ví dụ: 1',
+                label: 'Mã phiên điểm danh (Session ID - Mặc định: 1)',
+                hint: 'Để trống sẽ mặc định phiên #1',
                 keyboardType: TextInputType.number,
                 prefixIcon: Icons.tag,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Vui lòng nhập Session ID';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
 

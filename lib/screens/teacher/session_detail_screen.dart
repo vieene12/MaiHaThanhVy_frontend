@@ -23,6 +23,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   final ApiService _apiService = ApiService();
   AttendanceSession? _session;
   List<Student> _enrolledStudents = [];
+  final Map<int, String> _studentStatuses = {};
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -33,10 +34,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _loadSessionDetails() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_session == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     final sessionRes = await _apiService.getSessionById(widget.sessionId);
 
@@ -48,6 +51,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           await _apiService.getStudentsByClass(_session!.classRoomId);
       if (mounted && studentsRes.success && studentsRes.data != null) {
         _enrolledStudents = studentsRes.data!;
+        // Fetch current session status for each enrolled student
+        for (final student in _enrolledStudents) {
+          final histRes =
+              await _apiService.getStudentAttendanceHistory(student.id);
+          if (histRes.success && histRes.data != null) {
+            final match = histRes.data!
+                .where((r) => r.sessionId == widget.sessionId)
+                .toList();
+            if (match.isNotEmpty) {
+              _studentStatuses[student.id] = match.first.status.toUpperCase();
+            }
+          }
+        }
       }
     } else {
       _errorMessage = sessionRes.message.isNotEmpty
@@ -55,17 +71,51 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           : 'Không thể tải chi tiết phiên điểm danh';
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toUpperCase()) {
+      case 'PRESENT':
+        return 'Có mặt';
+      case 'LATE':
+        return 'Đi muộn';
+      case 'EXCUSED':
+        return 'Có phép';
+      case 'ABSENT':
+        return 'Vắng mặt';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PRESENT':
+        return AppTheme.success;
+      case 'LATE':
+        return AppTheme.warning;
+      case 'EXCUSED':
+        return AppTheme.info;
+      case 'ABSENT':
+        return AppTheme.error;
+      default:
+        return const Color(0xFF64748B);
+    }
   }
 
   void _showManualCheckInDialog(Student student) {
-    String selectedStatus = 'PRESENT';
+    String selectedStatus = _studentStatuses[student.id] ?? 'PRESENT';
     final noteController = TextEditingController();
+    final parentContext = context;
+    final messenger = ScaffoldMessenger.of(parentContext);
 
     showDialog(
-      context: context,
+      context: parentContext,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (dialogContext, setDialogState) => AlertDialog(
           title: Text('Điểm danh cho ${student.fullName}'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -80,6 +130,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
                   ChoiceChip(
                     label: const Text('Có mặt'),
@@ -127,30 +178,45 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final noteText = noteController.text.trim();
                 Navigator.pop(ctx);
+
                 final res = await _apiService.manualCheckIn(
                   sessionId: widget.sessionId,
                   studentId: student.id,
                   status: selectedStatus,
-                  note: noteController.text.trim().isEmpty
-                      ? null
-                      : noteController.text.trim(),
+                  note: noteText.isEmpty ? null : noteText,
                 );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+
+                if (!mounted) return;
+
+                if (res.success) {
+                  setState(() {
+                    _studentStatuses[student.id] = selectedStatus;
+                  });
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(
                     SnackBar(
-                      content: Text(res.message.isNotEmpty
-                          ? res.message
-                          : (res.success
-                              ? 'Điểm danh thành công'
-                              : 'Điểm danh thất bại')),
-                      backgroundColor:
-                          res.success ? AppTheme.success : AppTheme.error,
+                      content: Text(
+                        'Điểm danh thành công: ${student.fullName} (${_statusLabel(selectedStatus)})',
+                      ),
+                      backgroundColor: AppTheme.success,
+                      duration: const Duration(seconds: 2),
                     ),
                   );
-                  if (res.success) {
-                    _loadSessionDetails();
-                  }
+                  await _loadSessionDetails();
+                } else {
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        res.message.isNotEmpty
+                            ? res.message
+                            : 'Điểm danh thất bại',
+                      ),
+                      backgroundColor: AppTheme.error,
+                    ),
+                  );
                 }
               },
               child: const Text('Lưu'),
@@ -185,6 +251,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   : RefreshIndicator(
                       onRefresh: _loadSessionDetails,
                       child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -239,8 +306,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                       ),
                                     const SizedBox(height: 12),
 
-                                    // QR text with copy
+                                    // QR text with copy (4-6 char code badge)
                                     InkWell(
+                                      borderRadius: BorderRadius.circular(12),
                                       onTap: () {
                                         if (_session!.qrCode != null) {
                                           Clipboard.setData(ClipboardData(
@@ -249,31 +317,48 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                               .showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                  'Đã sao chép mã QR vào bộ nhớ tạm'),
+                                                  'Đã sao chép mã điểm danh vào bộ nhớ tạm'),
                                             ),
                                           );
                                         }
                                       },
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Mã QR: ${_session!.qrCode ?? "N/A"}',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: AppTheme.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              AppTheme.primary.withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: AppTheme.primary
+                                                .withOpacity(0.3),
                                           ),
-                                          const SizedBox(width: 4),
-                                          const Icon(Icons.copy,
-                                              size: 14, color: AppTheme.primary),
-                                        ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Mã nhập tay: ${_session!.qrCode ?? "N/A"}',
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                letterSpacing: 1.5,
+                                                color: AppTheme.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Icon(Icons.copy_rounded,
+                                                size: 18,
+                                                color: AppTheme.primary),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      'Giờ học: ${_session!.startTime} - ${_session!.endTime} • ${DateFormat("dd/MM/yyyy").format(_session!.sessionDate)}',
+                                      'Mã phiên: #${_session!.id} • Giờ học: ${_session!.startTime} - ${_session!.endTime} • ${DateFormat("dd/MM/yyyy").format(_session!.sessionDate)}',
+                                      textAlign: TextAlign.center,
                                       style: const TextStyle(
                                           fontSize: 13,
                                           color: Color(0xFF334155)),
@@ -357,19 +442,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                 itemCount: _enrolledStudents.length,
                                 itemBuilder: (context, index) {
                                   final s = _enrolledStudents[index];
+                                  final currentStatus = _studentStatuses[s.id];
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 8),
                                     child: ListTile(
                                       leading: CircleAvatar(
-                                        backgroundColor:
-                                            AppTheme.primary.withOpacity(0.12),
+                                        backgroundColor: currentStatus != null
+                                            ? _statusColor(currentStatus)
+                                                .withOpacity(0.15)
+                                            : AppTheme.primary
+                                                .withOpacity(0.12),
                                         child: Text(
                                           s.fullName.isNotEmpty
                                               ? s.fullName[0].toUpperCase()
                                               : 'S',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: AppTheme.primary,
+                                            color: currentStatus != null
+                                                ? _statusColor(currentStatus)
+                                                : AppTheme.primary,
                                           ),
                                         ),
                                       ),
@@ -378,17 +469,59 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                         style: const TextStyle(
                                             fontWeight: FontWeight.w600),
                                       ),
-                                      subtitle: Text('MSSV: ${s.studentCode}'),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text('MSSV: ${s.studentCode}'),
+                                          if (currentStatus != null)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 4),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: _statusColor(
+                                                          currentStatus)
+                                                      .withOpacity(0.12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  _statusLabel(currentStatus),
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: _statusColor(
+                                                        currentStatus),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                       trailing: ElevatedButton.icon(
                                         style: ElevatedButton.styleFrom(
+                                          backgroundColor: currentStatus != null
+                                              ? _statusColor(currentStatus)
+                                              : AppTheme.primary,
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 12, vertical: 8),
                                           textStyle: const TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold),
                                         ),
-                                        icon: const Icon(Icons.check, size: 14),
-                                        label: const Text('Điểm danh'),
+                                        icon: Icon(
+                                            currentStatus != null
+                                                ? Icons.edit_rounded
+                                                : Icons.check,
+                                            size: 14),
+                                        label: Text(currentStatus != null
+                                            ? _statusLabel(currentStatus)
+                                            : 'Điểm danh'),
                                         onPressed: () =>
                                             _showManualCheckInDialog(s),
                                       ),

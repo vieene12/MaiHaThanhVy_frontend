@@ -36,6 +36,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _errorMessage = null;
     });
 
+    if (mounted) {
+      Provider.of<AuthProvider>(context, listen: false).fetchProfile();
+    }
+
     final res = await _apiService.getAdminDashboard();
 
     if (!mounted) return;
@@ -191,14 +195,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               value: '${_dashboardData?.totalStudents ?? 0}',
                               icon: Icons.people_alt_outlined,
                               color: const Color(0xFF3B82F6),
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         const ManageStudentsScreen(),
                                   ),
                                 );
+                                if (mounted) _loadDashboard();
                               },
                             ),
                             StatCard(
@@ -206,14 +211,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               value: '${_dashboardData?.totalTeachers ?? 0}',
                               icon: Icons.person_pin_outlined,
                               color: const Color(0xFF10B981),
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         const ManageTeachersScreen(),
                                   ),
                                 );
+                                if (mounted) _loadDashboard();
                               },
                             ),
                             StatCard(
@@ -221,14 +227,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               value: '${_dashboardData?.totalSubjects ?? 0}',
                               icon: Icons.menu_book_outlined,
                               color: const Color(0xFF8B5CF6),
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         const ManageSubjectsScreen(),
                                   ),
                                 );
+                                if (mounted) _loadDashboard();
                               },
                             ),
                             StatCard(
@@ -236,14 +243,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               value: '${_dashboardData?.totalClasses ?? 0}',
                               icon: Icons.class_outlined,
                               color: const Color(0xFFF59E0B),
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         const ManageClassroomsScreen(),
                                   ),
                                 );
+                                if (mounted) _loadDashboard();
                               },
                             ),
                           ],
@@ -331,13 +339,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           title: 'Quản lý Sinh viên',
                           subtitle: 'Xem danh sách, thêm, sửa, xóa sinh viên',
                           color: const Color(0xFF3B82F6),
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const ManageStudentsScreen(),
                               ),
                             );
+                            if (mounted) _loadDashboard();
                           },
                         ),
                         _buildNavTile(
@@ -345,13 +354,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           title: 'Quản lý Giảng viên',
                           subtitle: 'Danh sách giảng viên và khoa phụ trách',
                           color: const Color(0xFF10B981),
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const ManageTeachersScreen(),
                               ),
                             );
+                            if (mounted) _loadDashboard();
                           },
                         ),
                         _buildNavTile(
@@ -359,13 +369,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           title: 'Quản lý Môn học',
                           subtitle: 'Thiết lập mã môn, số tín chỉ môn học',
                           color: const Color(0xFF8B5CF6),
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const ManageSubjectsScreen(),
                               ),
                             );
+                            if (mounted) _loadDashboard();
                           },
                         ),
                         _buildNavTile(
@@ -373,14 +384,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           title: 'Quản lý Lớp học & Ghi danh',
                           subtitle: 'Phân công lớp, giảng viên và sinh viên',
                           color: const Color(0xFFF59E0B),
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
                                     const ManageClassroomsScreen(),
                               ),
                             );
+                            if (mounted) _loadDashboard();
                           },
                         ),
                         const SizedBox(height: 24),

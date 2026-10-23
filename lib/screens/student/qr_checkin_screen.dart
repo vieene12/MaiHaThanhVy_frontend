@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../widgets/custom_button.dart';
@@ -38,14 +39,52 @@ class _QrCheckinScreenState extends State<QrCheckinScreen> {
     super.dispose();
   }
 
+  Future<void> _openCameraScanner() async {
+    final scannedValue = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const _QrCameraScannerPage(),
+      ),
+    );
+
+    if (scannedValue != null && scannedValue.trim().isNotEmpty && mounted) {
+      final raw = scannedValue.trim();
+      // Support both "sessionId|qrCode" and plain "ATT-..." QR codes
+      if (raw.contains('|')) {
+        final parts = raw.split('|');
+        if (parts.length >= 2 && int.tryParse(parts[0].trim()) != null) {
+          _sessionIdController.text = parts[0].trim();
+          _qrCodeController.text = parts.sublist(1).join('|').trim();
+        } else {
+          _qrCodeController.text = raw;
+        }
+      } else {
+        _qrCodeController.text = raw;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã quét mã QR: ${_qrCodeController.text}'),
+          backgroundColor: AppTheme.success,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Automatically submit check-in after scanning
+      await _handleCheckin();
+    }
+  }
+
   Future<void> _handleCheckin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final sessionId = int.tryParse(_sessionIdController.text.trim());
+    // Allow sessionId = 0 when user scans QR code directly without typing Session ID
+    final sessionIdText = _sessionIdController.text.trim();
+    final sessionId = sessionIdText.isEmpty ? 0 : int.tryParse(sessionIdText);
     if (sessionId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vui lòng nhập ID phiên điểm danh hợp lệ'),
+          content: Text('Mã phiên (Session ID) phải là số hợp lệ'),
           backgroundColor: AppTheme.warning,
         ),
       );
@@ -122,6 +161,13 @@ class _QrCheckinScreenState extends State<QrCheckinScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Điểm Danh Mã QR'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.camera_alt_rounded),
+            tooltip: 'Mở Camera quét QR',
+            onPressed: _openCameraScanner,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -130,57 +176,91 @@ class _QrCheckinScreenState extends State<QrCheckinScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Scanner Animation Illustration
+              // Interactive Scanner Card (Tap to open Camera)
               Center(
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: AppTheme.primary.withOpacity(0.3),
-                      width: 2,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: _openCameraScanner,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: AppTheme.primary.withOpacity(0.35),
+                        width: 2,
+                      ),
                     ),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.qr_code_scanner_rounded,
-                      size: 72,
-                      color: AppTheme.primary,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.qr_code_scanner_rounded,
+                          size: 64,
+                          color: AppTheme.primary,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Chạm để mở Camera',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: _openCameraScanner,
+                icon: const Icon(Icons.camera_alt_rounded),
+                label: const Text(
+                  'Mở Camera Quét Mã QR',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ),
+
               const SizedBox(height: 20),
               const Text(
-                'Nhập Mã QR & Vị Trí GPS',
+                'Hoặc Nhập Mã Code Thủ Công (4 - 6 ký tự)',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 6),
               const Text(
-                'Dán hoặc nhập mã QR được chiếu trên màn hình lớp học:',
+                'Nếu không quét được Camera, hãy nhập mã 4 - 6 ký tự hiển thị dưới mã QR của giảng viên:',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
                   color: Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               CustomTextField(
-                controller: _sessionIdController,
-                label: 'Mã phiên điểm danh (Session ID)',
-                hint: 'Ví dụ: 1',
-                keyboardType: TextInputType.number,
-                prefixIcon: Icons.tag,
+                controller: _qrCodeController,
+                label: 'Mã Code điểm danh (4 - 6 ký tự)',
+                hint: 'Ví dụ: QR1001',
+                prefixIcon: Icons.pin_outlined,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
-                    return 'Vui lòng nhập Session ID';
+                    return 'Vui lòng quét QR hoặc nhập mã Code (4 - 6 ký tự)';
                   }
                   return null;
                 },
@@ -188,16 +268,11 @@ class _QrCheckinScreenState extends State<QrCheckinScreen> {
               const SizedBox(height: 16),
 
               CustomTextField(
-                controller: _qrCodeController,
-                label: 'Nội dung mã QR',
-                hint: 'ATT-1-...',
-                prefixIcon: Icons.qr_code,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Vui lòng nhập hoặc dán mã QR';
-                  }
-                  return null;
-                },
+                controller: _sessionIdController,
+                label: 'Mã phiên (Session ID - Không bắt buộc)',
+                hint: 'Để trống hệ thống tự nhận diện theo mã Code',
+                keyboardType: TextInputType.number,
+                prefixIcon: Icons.tag,
               ),
               const SizedBox(height: 16),
 
@@ -228,7 +303,7 @@ class _QrCheckinScreenState extends State<QrCheckinScreen> {
                 '*(Mặc định tọa độ cơ sở HUTECH: 10.8018, 106.7145 để thỏa mãn điều kiện bán kính lớp học)',
                 style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               CustomButton(
                 text: 'Xác Nhận Điểm Danh',
@@ -239,6 +314,103 @@ class _QrCheckinScreenState extends State<QrCheckinScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _QrCameraScannerPage extends StatefulWidget {
+  const _QrCameraScannerPage();
+
+  @override
+  State<_QrCameraScannerPage> createState() => _QrCameraScannerPageState();
+}
+
+class _QrCameraScannerPageState extends State<_QrCameraScannerPage> {
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+  );
+  bool _hasScanned = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_hasScanned) return;
+    for (final barcode in capture.barcodes) {
+      final rawValue = barcode.rawValue;
+      if (rawValue != null && rawValue.trim().isNotEmpty) {
+        _hasScanned = true;
+        Navigator.pop(context, rawValue.trim());
+        break;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Quét Mã QR Điểm Danh'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flash_on_rounded),
+            tooltip: 'Bật/Tắt đèn Flash',
+            onPressed: () => _controller.toggleTorch(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.cameraswitch_rounded),
+            tooltip: 'Đổi Camera trước/sau',
+            onPressed: () => _controller.switchCamera(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+          ),
+          // Framing overlay
+          Center(
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppTheme.primary, width: 3),
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 48,
+            left: 24,
+            right: 24,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'Hướng camera vào mã QR của giảng viên để tự động điểm danh',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

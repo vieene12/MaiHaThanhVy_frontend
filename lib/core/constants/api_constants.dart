@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConstants {
   // Default host addresses depending on platform
-  static const String defaultEmulatorHost = 'http://10.0.2.2:5215';
+  static const String defaultEmulatorHost = 'http://localhost:5215';
+  static const String defaultLanHost = 'http://192.168.1.25:5215';
   static const String defaultLocalhost = 'http://localhost:5215';
   static const String defaultHttpsLocalhost = 'https://localhost:7190';
 

@@ -39,6 +39,45 @@ class ApiService {
     return headers;
   }
 
+  Future<http.Response> _sendHttp(
+    String hostUrl,
+    String method,
+    String endpoint, {
+    required Map<String, String> headers,
+    String? encodedBody,
+    Map<String, String>? queryParams,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    var uri = Uri.parse('$hostUrl$endpoint');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
+
+    final client = http.Client();
+    try {
+      switch (method.toUpperCase()) {
+        case 'GET':
+          return await client.get(uri, headers: headers).timeout(timeout);
+        case 'POST':
+          return await client
+              .post(uri, headers: headers, body: encodedBody)
+              .timeout(timeout);
+        case 'PUT':
+          return await client
+              .put(uri, headers: headers, body: encodedBody)
+              .timeout(timeout);
+        case 'DELETE':
+          return await client
+              .delete(uri, headers: headers, body: encodedBody)
+              .timeout(timeout);
+        default:
+          throw UnsupportedError('HTTP method $method is not supported.');
+      }
+    } finally {
+      client.close();
+    }
+  }
+
   // Generic Request Helper
   Future<ApiResponse<T>> _request<T>(
     String method,
@@ -48,54 +87,52 @@ class ApiService {
     bool requiresAuth = true,
     T Function(dynamic)? fromJsonT,
   }) async {
-    try {
-      var uri = Uri.parse('$baseUrl$endpoint');
-      if (queryParams != null && queryParams.isNotEmpty) {
-        uri = uri.replace(queryParameters: queryParams);
-      }
+    final headers = _getHeaders(requiresAuth: requiresAuth);
+    final encodedBody = body != null ? jsonEncode(body) : null;
+    final candidates = <String>{
+      baseUrl,
+      ApiConstants.defaultLocalhost,
+      ApiConstants.defaultLanHost,
+      'http://10.0.2.2:5215',
+    }.toList();
 
-      http.Response response;
-      final headers = _getHeaders(requiresAuth: requiresAuth);
-      final encodedBody = body != null ? jsonEncode(body) : null;
+    http.Response? response;
+    Object? lastError;
 
-      final client = http.Client();
+    for (final host in candidates) {
       try {
-        switch (method.toUpperCase()) {
-          case 'GET':
-            response = await client.get(uri, headers: headers).timeout(
-                  const Duration(seconds: 15),
-                );
-            break;
-          case 'POST':
-            response = await client
-                .post(uri, headers: headers, body: encodedBody)
-                .timeout(const Duration(seconds: 15));
-            break;
-          case 'PUT':
-            response = await client
-                .put(uri, headers: headers, body: encodedBody)
-                .timeout(const Duration(seconds: 15));
-            break;
-          case 'DELETE':
-            response = await client
-                .delete(uri, headers: headers, body: encodedBody)
-                .timeout(const Duration(seconds: 15));
-            break;
-          default:
-            throw UnsupportedError('HTTP method $method is not supported.');
+        response = await _sendHttp(
+          host,
+          method,
+          endpoint,
+          headers: headers,
+          encodedBody: encodedBody,
+          queryParams: queryParams,
+        );
+        if (host != baseUrl) {
+          await StorageService.saveBaseUrl(host);
         }
-      } finally {
-        client.close();
+        break;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    try {
+      if (response == null) {
+        if (lastError != null) throw lastError;
+        throw const SocketException('Unable to connect');
       }
 
-      if (response.body.isEmpty) {
+      if (response.bodyBytes.isEmpty) {
         return ApiResponse<T>(
           success: response.statusCode >= 200 && response.statusCode < 300,
           message: 'Trạng thái phản hồi: ${response.statusCode}',
         );
       }
 
-      final Map<String, dynamic> json = jsonDecode(response.body);
+      final String responseText = utf8.decode(response.bodyBytes);
+      final Map<String, dynamic> json = jsonDecode(responseText);
       return ApiResponse.fromJson(json, fromJsonT);
     } on SocketException {
       return ApiResponse<T>(

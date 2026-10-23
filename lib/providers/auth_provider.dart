@@ -31,6 +31,9 @@ class AuthProvider with ChangeNotifier {
     _token = StorageService.getToken();
     _currentUser = StorageService.getUser();
     notifyListeners();
+    if (_token != null) {
+      fetchProfile();
+    }
   }
 
   void clearError() {

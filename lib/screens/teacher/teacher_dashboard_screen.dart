@@ -96,13 +96,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
 
     if (createdSession != null && mounted) {
-      _loadTeacherData();
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => SessionDetailScreen(sessionId: createdSession.id),
         ),
       );
+      if (mounted) _loadTeacherData();
     }
   }
 
@@ -404,8 +404,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                               ),
                                             );
                                         if (createdSession != null && mounted) {
-                                          _loadTeacherData();
-                                          Navigator.push(
+                                          await Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (_) =>
@@ -415,6 +414,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                                   ),
                                             ),
                                           );
+                                          if (mounted) _loadTeacherData();
                                         }
                                       },
                                     ),
@@ -485,8 +485,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                 const Icon(Icons.chevron_right, size: 20),
                               ],
                             ),
-                            onTap: () {
-                              Navigator.push(
+                            onTap: () async {
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => SessionDetailScreen(
@@ -494,6 +494,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                   ),
                                 ),
                               );
+                              if (mounted) _loadTeacherData();
                             },
                           ),
                         ),

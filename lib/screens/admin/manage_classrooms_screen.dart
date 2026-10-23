@@ -95,7 +95,7 @@ class _ManageClassroomsScreenState extends State<ManageClassroomsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (dialogContext, setDialogState) => AlertDialog(
           title: Text(isEditing ? 'Sửa thông tin lớp học' : 'Tạo lớp học mới'),
           content: SingleChildScrollView(
             child: Column(
@@ -563,7 +563,7 @@ class _ClassEnrollmentSheetState extends State<_ClassEnrollmentSheet> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (dialogContext, setDialogState) => AlertDialog(
           title: const Text('Ghi danh sinh viên vào lớp'),
           content: DropdownButtonFormField<int>(
             value: selectedStudentId,
